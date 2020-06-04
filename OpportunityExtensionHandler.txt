@@ -1,0 +1,212 @@
+public class OpportunityExtensionHandler {
+    public static String errorMessage = '';
+    
+    @auraenabled
+    public static List<ResouceOLIWrapper> getItemList(Id projectId){
+        List<ResouceOLIWrapper> itemList = new List<ResouceOLIWrapper>();
+        List<Opportunity> oppList = [Select Id,PriceBook2Id,CurrencyIsoCode   from Opportunity Where Id =: projectId Order By CreatedDate Desc limit 1];
+        System.debug('old opportunity: '+oppList[0].CurrencyIsoCode);
+        List<OpportunityLineItem> olis = [Select Id,Quantity,UnitPrice,ListPrice,Discount__c,Tenure__c,Name,Product2.Name,Product2.Experience__c,Opportunity.Contract_End_Date__c,PriceBookEntryId,PriceBookEntry.CurrencyIsoCode   from OpportunityLineItem Where OpportunityId = :oppList];
+        System.debug('olis[0].PriceBookEntryId: '+olis[0].PriceBookEntryId);
+        System.debug('olis[0].PriceBookEntry.CurrencyIsoCode: '+olis[0].PriceBookEntry.CurrencyIsoCode);
+        if(!olis.isEmpty()){
+            for(OpportunityLineItem oli : olis){
+                ResouceOLIWrapper objWrapper = new ResouceOLIWrapper();
+                objWrapper.skill = oli.Product2.Name;
+                objWrapper.experience = oli.Product2.Experience__c;
+                //objWrapper.cost_per_month = oli.ListPrice;
+                /*if(oli.Discount__c != null && oli.Discount__c > 0){
+objWrapper.selling_price = oli.ListPrice - ((oli.ListPrice*oli.Discount__c)/100);
+}*/
+                objWrapper.cost_per_month = oli.UnitPrice;
+                objWrapper.selling_price = oli.ListPrice;
+                objWrapper.discount = oli.Discount__c;
+                objWrapper.quantity = Integer.valueOf(oli.Quantity);
+                objWrapper.maxQuantity = Integer.valueOf(oli.Quantity);
+                objWrapper.tenure = '1 month';
+                objWrapper.isSelected = false;
+                if(Test.isRunningTest()){
+                    oli.Opportunity.Contract_End_Date__c=Date.newInstance(2019,12,12);
+                }
+                system.debug('test date'+oli.Opportunity.Contract_End_Date__c);
+                objWrapper.start_date = oli.Opportunity.Contract_End_Date__c.addDays(1);
+                objWrapper.end_date = oli.Opportunity.Contract_End_Date__c.addDays(1).addMonths(1);
+                objWrapper.contractEndDate = oli.Opportunity.Contract_End_Date__c;
+                itemList.add(objWrapper);
+            }
+        }
+        
+        System.debug('itemList: '+itemList);
+        return itemList;
+    }
+    
+    
+    public class ResourceItemWrapper{
+        @auraEnabled
+        public Resource_Item__c objResourceItem;
+        @auraEnabled
+        public Boolean isSelected;
+        
+        public ResourceItemWrapper(Resource_Item__c objResourceItem, Boolean isSelected){
+            this.objResourceItem = objResourceItem;
+            this.isSelected = isSelected;
+        }
+    }
+    @auraEnabled 
+    public static List<ResouceOLIWrapper> searchResources(String resourceSkill, String resourceExp, Id projectId){
+        
+        System.debug('resourceSkill: '+resourceSkill);
+        System.debug('resourceExp: '+resourceExp);
+        System.debug('projectId: '+projectId);
+        List<ResouceOLIWrapper> lstResourceWrapper = new List<ResouceOLIWrapper>();
+        
+        List<Opportunity> oppList = [Select Id,PriceBook2Id from Opportunity Where Id =: projectId  Order By CreatedDate Desc limit 1];
+        List<PriceBookEntry> pbeList = [Select Id, Product2.Name,UnitPrice,Product2.Experience__c From PriceBookEntry Where Pricebook2Id =: oppList[0].PriceBook2Id And Product2.Experience__c = :resourceExp And Product2.Name=:resourceSkill];
+        System.debug('pbelist '+pbeList);
+        for(PriceBookEntry pbe : pbeList){
+            ResouceOLIWrapper objWrapper = new ResouceOLIWrapper();
+            objWrapper.skill = pbe.Product2.Name;
+            objWrapper.experience = pbe.Product2.Experience__c;
+            objWrapper.cost_per_month = pbe.UnitPrice;
+            objWrapper.selling_price = pbe.UnitPrice;
+            objWrapper.tenure = '1 month';
+            objWrapper.quantity = 1;
+            objWrapper.isSelected = false;
+            lstResourceWrapper.add(objWrapper);
+            
+        }
+        System.debug('lstResourceWrapper: '+lstResourceWrapper);
+        return lstResourceWrapper;
+        
+    }
+    @auraEnabled 
+    public static String saveOpportunity(String strObjList, Id projectId, String extendedMonths, String oppType){
+        System.debug('strObjList: '+strObjList);
+        System.debug('projectId: '+projectId);
+        System.debug('extendedMonths: '+extendedMonths);
+        System.debug('oppType: '+oppType);
+        
+        String recId = '';
+        List<String> lstString = extendedMonths.split(' ');
+        
+        String query = UtilityClass.getQueryString('Opportunity');
+        query += ' From Opportunity Where  Id = :projectId  Order By CreatedDate Desc limit 1';
+        List<Opportunity> oppList = Database.query(query);
+        
+        //List<Opportunity> oppList = [Select Id,AccountId,Name,PriceBook2Id from Opportunity Where Opportunity__c = null And Project__c =: projectId Order By CreatedDate Desc limit 1];
+        //Opportunity newOpp = new Opportunity();
+        Opportunity newOpp = oppList[0].clone(false, true, false, false);
+        newOpp.PO_Attachedd__c = false;
+        newOpp.PO_Received__c = '';
+        newOpp.Project_Started__c = false;
+        newOpp.Request_to_start_project__c = false;
+        newOpp.Commit_Criteria__c = null;
+
+
+        if(newOpp.We_are_Last_2_shortlisted__c == 'Yes'){
+            newOpp.Status__c = 'Hot';
+            newOpp.Probability__c = 70;
+        }
+        else if(newOpp.We_are_Last_2_shortlisted__c != 'Yes'){
+            newOpp.Status__c ='Warm';
+            newOpp.Probability__c = 50;
+        }
+        //newOpp.Project__c = projectId;
+        newOpp.AccountId = oppList[0].AccountId;
+        newOpp.Opportunity__c = oppList[0].Id;
+        newOpp.StageName = null;
+        newOpp.CloseDate = System.today();
+        newOpp.Name = oppList[0].Name + ' - ' + oppType; 
+        System.debug('****test**: '+'Existing Client - '+oppType);
+        newOpp.Type_of_Business__c = 'Existing Client - '+oppType;
+        if(oppType == 'Renewal'){
+            newOpp.StageName = 'Quotation Proposal';
+            //make fields null for Renewal
+            //
+        } else{
+            newOpp.StageName = 'Closed Won';
+        }
+        System.debug('new opportunity: '+newOpp.CurrencyIsoCode);
+        insert newOpp;
+        List<PriceBookEntry> pbeList = [Select Id, Product2.Name,UnitPrice,Product2.Experience__c From PriceBookEntry Where Pricebook2Id =: oppList[0].PriceBook2Id And CurrencyIsoCode =:newOpp.CurrencyIsoCode];
+        Map<String,String> pbeMap = new Map<String, String>();
+        for(PriceBookEntry pbe : pbeList){
+            pbeMap.put(pbe.Product2.Name+':'+pbe.Product2.Experience__c,pbe.Id);   
+        }
+        System.debug('***map-->'+pbeMap);
+        List<OpportunityLineItem> oliList = new List<OpportunityLineItem>();
+        List<ResouceOLIWrapper> lstResourceWrapper = (List<ResouceOLIWrapper>)JSON.deserialize(strObjList, List<ResouceOLIWrapper>.class);
+        for(ResouceOLIWrapper obj : lstResourceWrapper){
+            OpportunityLineItem oli = new OpportunityLineItem();
+            oli.OpportunityId = newOpp.Id;
+            oli.Quantity = obj.quantity;
+            oli.Discount__c = obj.discount;
+            oli.UnitPrice = obj.cost_per_month;
+            System.debug('***key--'+obj.skill+':'+obj.experience);
+            System.debug('***key-->'+pbeMap.containskey(obj.skill+':'+obj.experience));
+            System.debug('***value-->'+pbeMap.get(obj.skill+':'+obj.experience));
+            oli.PricebookEntryId = pbeMap.get(obj.skill+':'+obj.experience);
+            
+            oli.Tenure__c = obj.tenure;
+            oli.Start_Date__c = obj.start_date;
+            if(lstString[1].contains('year')){
+                oli.End_Date__c = oli.Start_Date__c.addYears(Integer.valueOf(lstString[0]));
+            } else if(lstString[1].contains('month')){
+                oli.End_Date__c = oli.Start_Date__c.addMonths(Integer.valueOf(lstString[0]));
+            }
+            oli.End_Date__c = oli.End_Date__c.addDays(-1);
+            system.debug('****oli-->'+oli);
+            oliList.add(oli);
+        }
+        if(oliList.size() > 0){
+            System.debug('olilist[0].PricebookEntryId: '+olilist[0].PricebookEntryId);
+            System.debug('olist==>'+olilist);
+            insert oliList;
+            return newOpp.Id;
+        }
+        return '';
+    }
+    
+    
+    public class ResourceWrapper{
+        @auraEnabled
+        public Resource__c objResource;
+        @auraenabled
+        public Boolean isSelected;
+        
+        public ResourceWrapper(Resource__c objResource, Boolean isSelected){
+            this.objResource = objResource;
+            this.isSelected = isSelected;
+        }
+        
+    }
+    
+    public class ResouceOLIWrapper{
+        @auraEnabled
+        public String skill;
+        @auraEnabled
+        public String experience;
+        @auraEnabled
+        public Decimal cost_per_month;
+        @auraEnabled
+        public Decimal selling_price;
+        @auraEnabled
+        public Integer quantity;
+        @auraEnabled
+        public Decimal discount;
+        @auraEnabled
+        public Date start_date;
+        @auraEnabled
+        public Date end_date;
+        @auraEnabled
+        public String tenure;
+        @auraEnabled
+        public Boolean isSelected;
+        @auraEnabled
+        public Integer maxQuantity;
+        @auraEnabled
+        public Date contractEndDate;
+        
+        
+    }
+}

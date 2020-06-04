@@ -1,0 +1,231 @@
+public class OpportunityProductTriggerHandler {
+    private static Boolean updateOnce = true;
+    public static void onBeforeInsert(List<OpportunityLineItem> lstOppLineItem){
+        callculatesaleprice(lstOppLineItem);
+    }
+    public static void onBeforeUpdate(List<OpportunityLineItem> lstOppLineItem){
+        System.debug('before update');
+        callculatesaleprice(lstOppLineItem);
+    }
+    public static void onAfterInsert(List<OpportunityLineItem> lstOppLineItem, Map<Id, OpportunityLineItem> mapOfNewOppLi){
+        
+        set<ID> setOLIIds = new Set<Id>();
+        for(OpportunityLineItem objOLI : lstOppLineItem){
+            setOLIIds.add(objOLI.Id);
+        }
+        createProjectAndResources(setOLIIds);
+        if(updateOnce)
+            updateTheAllocatedResourceIfany(mapOfNewOppLi);
+        checkForMaxEndDateAndUpdateOnOpportunity(setOLIIds);
+    }
+    /*
+Created by : SivanKumar @WarpDrive
+Created On : 15/11/2019 9:025 PM
+Method Description : When OpportunityLIneItem Updates the corresponding Allocated Resource record should get Update its discount field
+*/
+    
+    public static void onAfterUpdate(Map<Id, OpportunityLineItem> new_List_Of_OppLineItems, Map<Id, OpportunityLineItem> old_List_Of_OppLineItems){
+        
+        Map<Id, OpportunityLineItem> to_Updated_OppLIneitems = new Map<Id, OpportunityLineItem>();
+        List<Resource_Item__c> tobeUpdatedAllocatedResources = new List<Resource_Item__c>();
+        for(OpportunityLineItem oppl : new_List_Of_OppLineItems.values()){
+            if(oppl.Discount__c != old_List_Of_OppLineItems.get(oppl.Id).Discount__c){
+                to_Updated_OppLIneitems.put(oppl.Id, oppl);
+            }
+        }
+        if(!to_Updated_OppLIneitems.values().isEmpty() && to_Updated_OppLIneitems.values().size()>0){
+            List<Resource_Item__c> allocated_Resources_RelatedT_OppLineItems = new List<Resource_Item__c>([
+                Select Id, Discount__c, Opportunity_Resource__c from Resource_Item__c where Opportunity_Resource__c =: to_Updated_OppLIneitems.keySet()
+            ]);
+            if(!allocated_Resources_RelatedT_OppLineItems.isEmpty() && allocated_Resources_RelatedT_OppLineItems.size()>0){
+                for(Resource_Item__c ri : allocated_Resources_RelatedT_OppLineItems){
+                    if(to_Updated_OppLIneitems.keySet().contains(ri.Opportunity_Resource__c)){
+                        ri.Discount__c = to_Updated_OppLIneitems.get(ri.Opportunity_Resource__c).Discount__c;
+                        tobeUpdatedAllocatedResources.add(ri);
+                    }
+                }
+            }
+        }
+        if(!tobeUpdatedAllocatedResources.isEmpty() && tobeUpdatedAllocatedResources.size()>0){
+            update tobeUpdatedAllocatedResources;
+        }
+    }
+    
+    /*
+Created by : SivanKumar @WarpDrive
+Created On : 15/11/2019 10:05 PM
+Method Description : When OpportunityLIneItem delete the corresponding Allocated Resource record should get delete
+*/
+    
+    public static void onAfterDelete(List<OpportunityLineItem> old_List_Of_OppLineItems){
+        Set<ID> opportunityLineItemIds = new Set<ID>();
+        for(OpportunityLineItem oppl : old_List_Of_OppLineItems){
+            opportunityLineItemIds.add(oppl.Id);
+        }
+        List<Resource_Item__c> to_Be_Deleted_Resource = new List<Resource_Item__c>([
+            Select Id from Resource_Item__c where Opportunity_Resource__c in:opportunityLineItemIds
+        ]);
+        if(!to_Be_Deleted_Resource.isEmpty() && to_Be_Deleted_Resource.size()>0 && !ResourceItemTriggerHandler.bypassResourceDeletion){
+            delete to_Be_Deleted_Resource;
+        }
+    }
+    
+    public static void createProjectAndResources(Set<ID> setOLIIds){
+        List<OpportunityLineItem> lstOppLineItem = [SELECT Id, Product2.Name, Quantity,Price_before_discount__c, Allocation_temp__c, Product2.Experience__c, Opportunity.Name, Discount__c, OpportunityId, Opportunity.AccountId, Tenure__c, UnitPrice, Start_Date__c 
+                                                    FROM OpportunityLineItem WHERE Id IN: setOLIIds];
+        List<Resource_Item__c> lstRI = new List<Resource_Item__c>();
+        Map<id,id> mapofoppidtrs=new Map<id,id>();
+        for(OpportunityLineItem objOLI : lstOppLineItem){
+            Resource_Item__c objResouceItem = new Resource_Item__c();
+            objResouceItem.Allocation__c = objOLI.Allocation_temp__c;
+            objResouceItem.Contract_Start_Date__c = objOLI.Start_Date__c;
+            objResouceItem.Discount__c = objOLI.Discount__c;
+            objResouceItem.Year_of_Experience__c = String.valueOf(objOLI.Product2.Experience__c);
+            objResouceItem.Name = objOLI.Product2.Name;
+            objResouceItem.Skill__c = objOLI.Product2.Name;
+            objResouceItem.Tenure__c = objOLI.Tenure__c; 
+            objResouceItem.Opportunity__c = objOLI.OpportunityId;
+            objResouceItem.Opportunity_Resource__c = objOLI.Id;
+            
+            System.debug('objOLI.UnitPrice*objOLI.Quantity'+objOLI.UnitPrice*objOLI.Quantity);
+            System.debug('getTenureMonth(objOLI.Tenure__c)'+getTenureMonth(objOLI.Tenure__c));
+            
+            objResouceItem.Cost_Month__c = objOLI.UnitPrice*objOLI.Quantity/getTenureMonth(objOLI.Tenure__c);
+            
+            objResouceItem.Total_cost_for_tenure__c= objOLI.UnitPrice*objOLI.Quantity;
+            objResouceItem.No_of_Resources__c=  objOLI.Quantity;
+            objResouceItem.Total_price_for_tenure_without_discount__c=objOLI.Price_before_discount__c*objOLI.Quantity;
+            
+            
+            //objResouceItem.salesP
+            List<String> lstString = objOLI.Tenure__c.split(' ');
+            if(lstString[1] == 'month' || lstString[1] == 'months')
+                objResouceItem.Contract_End_Date__c = objOLI.Start_Date__c.addmonths(Integer.valueOf(lstString[0]));
+            else if(lstString[1] == 'year' || lstString[1] == 'years')
+                objResouceItem.Contract_End_Date__c = objOLI.Start_Date__c.addYears(Integer.valueOf(lstString[0]));
+            lstRI.add(objResouceItem);
+            
+        }
+        if(!lstRI.isEmpty() && lstRI.size()>0){
+            try{
+                insert lstRI;
+            }Catch(Exception e){
+                System.debug(e.getMessage()+'/n getCause'+e.getCause()+'/n getLineNumber'+e.getLineNumber());
+            }    
+        }
+        
+    }
+    // For calculating price
+    public static void callculatesaleprice(List<OpportunityLineItem> newList){
+        Set<id> productidset=new Set<id>();
+        List<PricebookEntry> prEntrylist=new List<PricebookEntry>();
+        Map<Id,Decimal> mapofproductwithprice=new Map<Id,Decimal>();
+        for(OpportunityLineItem oplt:newList){
+            productidset.add(oplt.Product2Id);
+        }
+        if(!productidset.isEmpty()){
+            prEntrylist=[SELECT Product2Id,UnitPrice FROM PricebookEntry where Product2Id=:productidset and Pricebook2.name='Standard Price Book'];
+            if(!prEntrylist.isEmpty()){
+                for(PricebookEntry pe:prEntrylist){
+                    mapofproductwithprice.put(pe.Product2Id,pe.UnitPrice);
+                }
+            }
+        }
+        for(OpportunityLineItem oplt:newList){
+            if(oplt.ListPrice!=null){
+                oplt.UnitPrice=oplt.ListPrice;
+            }else if(mapofproductwithprice.containsKey(oplt.Product2Id)){
+                oplt.UnitPrice=mapofproductwithprice.get(oplt.Product2Id);
+            }
+            oplt.UnitPrice=oplt.UnitPrice*getTenureMonth(oplt.Tenure__c);
+            oplt.Price_before_discount__c=oplt.UnitPrice;
+            if(oplt.Discount__c!=null && oplt.Discount__c > 0){
+                oplt.UnitPrice=oplt.UnitPrice - (oplt.UnitPrice*(oplt.Discount__c/100));
+            }
+            oplt.End_Date__c=oplt.Start_Date__c.addmonths(getTenureMonth(oplt.Tenure__c));
+            
+        }
+        
+    }
+    public static Integer getTenureMonth(String tenure){
+        system.debug('tenure '+tenure);
+        if(tenure.contains('months')){
+            return Integer.valueOf(tenure.substring(0,tenure.indexOf('months')-1));
+        }else if(tenure.contains('year')){
+            return (Integer.valueOf(tenure.substring(0,tenure.indexOf('year')-1))*12);
+        }else if(tenure.contains('month')){
+            return Integer.valueOf(tenure.substring(0,tenure.indexOf('month')-1));
+        }
+       return 0;
+    }
+    public static void updateTheAllocatedResourceIfany(Map<ID, OpportunityLineItem> lstOppLineItem){
+        Map<Id, OpportunityLineItem> oppliWithAR = new Map<Id, OpportunityLineItem>();
+        Map<Id, Resource_Item__c> listOfRI;
+        Set<ID> ARIDS = new Set<ID>();
+        for(OpportunityLineItem oppl : lstOppLineItem.values()){
+            ARIDS.add(oppl.ID);
+        }
+        if(!ARIDS.isEmpty() && ARIDS.size()>0){
+            system.debug('********');
+            listOfRI = new Map<Id, Resource_Item__c>([Select Id, Opportunity_Resource__c from Resource_Item__c where Opportunity_Resource__c in : ARIDS]);
+            if(!listOfRI.keySet().isEmpty() && listOfRI.keySet().size()>0){
+                system.debug('&&&&&&&');
+                for(Resource_Item__c ri : listOfRI.values()){
+                    if(lstOppLineItem.containsKey(ri.Opportunity_Resource__c)){
+                        OpportunityLineItem opptemp = new OpportunityLineItem();
+                        opptemp.Id = lstOppLineItem.get(ri.Opportunity_Resource__c).ID;
+                        //lstOppLineItem.get(ri.Opportunity_Resource__c).Allocated_Resource__c = ri.Id;
+                        opptemp.Allocated_Resource__c = ri.Id;
+                        oppliWithAR.put(opptemp.Id, opptemp);
+                    }
+                }
+            }
+        }
+        if(!oppliWithAR.keySet().isEmpty() && oppliWithAR.keySet().size()>0){
+            system.debug('ttttt');
+            update oppliWithAR.values();
+            updateOnce = false;
+        }
+    }
+    @future
+    public static void checkForMaxEndDateAndUpdateOnOpportunity(Set<Id> mapOfNewOppLi){
+        List<OpportunityLineItem> newoppli = new List<OpportunityLineItem>([
+            Select Id, Opportunity.Id from OpportunityLineItem where Id in:mapOfNewOppLi
+        ]);
+        Set<Id> oppIds = new Set<Id>();
+        for(OpportunityLineItem oppli : newoppli){
+                oppIds.add(oppli.Opportunity.Id);
+        }
+        system.debug('************start'+oppIds);
+        if(!oppIds.isEmpty() && oppIds.size()>0){
+            system.debug('************'+oppIds);
+            Map<Id, Opportunity> mapOfOpps = new Map<Id, Opportunity>([
+                Select Id, Contract_End_Date__c from Opportunity where Id in: oppIds
+            ]);
+            system.debug('************mapOfOpps'+mapOfOpps);
+            Map<Id, OpportunityLineItem> mapOfOppLisRelatedToOppos = new Map<Id, OpportunityLineItem>([
+                Select Id, End_Date__c, Opportunity.Id from OpportunityLineItem where Opportunity.Id in :oppIds order by End_Date__c desc
+            ]);
+            system.debug('************mapOfOppLisRelatedToOppos'+mapOfOppLisRelatedToOppos);
+            Map<Id, List<OpportunityLineItem>> mapOfOppIdAndOppLi = new Map<Id, List<OpportunityLineItem>>();
+            for(OpportunityLineItem opplineitem : mapOfOppLisRelatedToOppos.values()){
+                if(mapOfOppIdAndOppLi.containsKey(opplineitem.Opportunity.Id)){
+                    mapOfOppIdAndOppLi.get(opplineitem.Opportunity.Id).add(opplineitem);
+                }
+                else{
+                    mapOfOppIdAndOppLi.put(opplineitem.Opportunity.Id,new List<OpportunityLineItem>{opplineitem});
+                }
+            }
+            system.debug('************mapOfOppIdAndOppLi'+mapOfOppIdAndOppLi);
+            for(Opportunity opp : mapOfOpps.values()){
+                if(mapOfOppIdAndOppLi.containsKey(opp.Id)){
+                    opp.Contract_End_Date__c = mapOfOppIdAndOppLi.get(opp.Id)[0].End_Date__c;
+                }
+            }
+            if(!mapOfOpps.values().isEmpty() && mapOfOpps.values().size()>0){
+                update mapOfOpps.values();
+                system.debug('************mapOfOpps*******'+mapOfOpps);
+            }
+        }
+    }
+}
