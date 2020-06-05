@@ -1,0 +1,137 @@
+@isTest
+public class OpportunityProductTriggerTest {
+    @isTest(SeeAllData=true)
+    static void testOpportunityProduct(){
+        Account acc=TestFactory.createAccount('Test');
+        insert acc;
+        id Pricebook2 = Test.getStandardPricebookId();
+        Product2 prod=TestFactory.createProduct('Test');
+        insert prod;
+        PricebookEntry entry=new PricebookEntry();
+        entry.Product2Id=prod.id;
+        entry.Pricebook2Id=Pricebook2;
+        entry.UnitPrice=12223;
+        entry.UseStandardPrice=false;
+        entry.IsActive=true;
+     //   System.debug('entry in pricebook'+entry);
+        insert entry;
+        opportunity opp=TestFactory.createOpportunity(acc);
+        opp.Pricebook2Id=pricebook2;
+        insert opp;    
+        
+        Resource_Item__c items=new Resource_Item__c();
+        items.Name='Test ';
+        items.Contract_Start_Date__c=Date.newInstance(2019,11,10);
+        items.Discount__c=0;
+        items.Opportunity__c=opp.id;
+        insert items;
+        List<OpportunityLineItem> listLineItem=new List<OpportunityLineItem>();
+        for(Integer i=1;i<=10;i++){
+            OpportunityLineItem item=new OpportunityLineItem();
+            item.OpportunityId=opp.id;
+            item.Product2Id=prod.id;
+            item.UnitPrice=2323323;
+            item.Quantity=22;
+            item.Discount__c =2;
+            item.Start_Date__c=Date.newInstance(2019,12, 11);
+            if(i==1){
+                item.Tenure__c=i+' month';
+                item.Week__c= i+' week';
+            }
+            else if(i==2){
+               item.Tenure__c=i+' year'; 
+               item.Week__c = i+' weeks';
+            }
+            else if(i==3){
+               item.Tenure__c=i+' year';
+               item.Week__c = i+' weeks';
+            }
+            else{
+                item.Tenure__c=i+' months';
+            }
+            item.Resource_Item__c=items.id;
+            listLineItem.add(item);
+        }
+        insert listLineItem;
+        
+        //delete listLineItem[0];
+        
+         /*List<OpportunityLineItem> listLineItem1=new List<OpportunityLineItem>();
+        for(Integer i=0;i<10;i++){
+            OpportunityLineItem item1=new OpportunityLineItem();
+            item1.OpportunityId=opp.id;
+            item1.Product2Id=prod.id;
+            item1.UnitPrice=555555;
+            item1.Quantity=11;
+            item1.Start_Date__c=Date.newInstance(2019,12, 12);
+            if(i==1){
+                item1.Tenure__c=(i+1)+' year';
+            }
+            else{
+                item1.Tenure__c=(i+1)+' month';
+            }
+            item1.Resource_Item__c=items.id;
+            listLineItem.add(item1);
+        }
+        update listLineItem1;*/
+    }
+    @isTest(SeeAllData=true)
+    static void testOpportunityProduct1(){
+        Account acc=TestFactory.createAccount('Test');
+        insert acc;
+        id Pricebook2 = Test.getStandardPricebookId();
+        Product2 prod=TestFactory.createProduct('Test');
+        insert prod;
+        PricebookEntry entry=new PricebookEntry();
+        entry.Product2Id=prod.id;
+        entry.Pricebook2Id=Pricebook2;
+        entry.UnitPrice=12223;
+        entry.UseStandardPrice=false;
+        entry.IsActive=true;
+     //   System.debug('entry in pricebook'+entry);
+        insert entry;
+        opportunity opp=TestFactory.createOpportunity(acc);
+        opp.Pricebook2Id=pricebook2;
+        insert opp;    
+        
+        Resource_Item__c items=new Resource_Item__c();
+        items.Name='Test ';
+        items.Contract_Start_Date__c=Date.newInstance(2019,11,10);
+        items.Discount__c=0;
+        items.Opportunity__c=opp.id;
+        insert items;
+        Map<id,OpportunityLineItem> mapLineItem = new Map<id,OpportunityLineItem>();
+        Map<id,OpportunityLineItem> mapnewLineItem = new Map<id,OpportunityLineItem>();
+        List<OpportunityLineItem> listLineItem=new List<OpportunityLineItem>();
+        for(Integer i=1;i<=3;i++){
+            OpportunityLineItem item=new OpportunityLineItem();
+            item.OpportunityId=opp.id;
+            item.Product2Id=prod.id;
+            item.UnitPrice=2323323;
+            item.Quantity=22;
+            item.Discount__c =2;
+            item.Start_Date__c=Date.newInstance(2019,12, 11);
+            if(i==1){
+                item.Week__c= i+' week';
+            }
+            else if(i==2){
+               item.Week__c = i+' weeks';
+            }
+            else if(i==3){
+               item.Week__c = i+' weeks';
+            }
+            
+            item.Resource_Item__c=items.id;
+            listLineItem.add(item);
+        }
+        insert listLineItem;
+        
+        mapLineItem.put(listLineItem[0].id,listLineItem[0]);
+        mapnewLineItem.put(listLineItem[0].id,listLineItem[0]);
+        Test.startTest();
+        OpportunityProductTriggerHandler.onAfterUpdate(mapnewLineItem,mapLineItem);
+        Test.stopTest();
+        
+    }
+    
+}
