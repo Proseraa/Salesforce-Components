@@ -1,0 +1,46 @@
+({
+    init : function (component,event, helper) {
+        component.set("v.inithandler", true);
+        component.set('v.myVal', '<b>Welcome To Aura Component to create Account</b>');
+    },
+    selectStep1 : function(component, event, helper){
+        component.set("v.inithandler", false);
+        component.set("v.isStep1", true);
+        component.set("v.selectedStep", "step1");
+        
+    },
+    InsertAc : function(component, event, helper){
+        var action = component.get("c.createaccount");
+        var attributeacName = component.find("accountame");
+        var value = attributeacName.get("v.value");
+        
+        action.setParams({
+            acName : value,
+        });
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                alert('Account Created successfully');
+            } 
+        });
+        component.set("v.isStep1", false);
+        component.set("v.isStepRecentAccount", true);
+        $A.enqueueAction(action);
+    },
+    selectStep2 : function(component, event, helper){
+        var action = component.get("c.fetchaccount");
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            if(state === 'SUCCESS'){
+                component.set("v.inithandler", false);
+                component.set("v.selectedStep", "step2");
+                component.set("v.isStep1", false);
+                component.set("v.isStep2", true);
+                component.set("v.isStepRecentAccount", false);
+                component.set("v.acName", response.getReturnValue());
+            }
+        });
+        $A.enqueueAction(action);
+        
+    },
+})
