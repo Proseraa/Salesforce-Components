@@ -1,8 +1,0 @@
-/*adjusting help text position*/
-.THIS .customIcon div{
-    vertical-align: top !important;
-}
- 
-.THIS.customIcon div{
-    vertical-align: top !important;
-}

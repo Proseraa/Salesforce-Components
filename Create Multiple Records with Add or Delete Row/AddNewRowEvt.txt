@@ -1,3 +1,0 @@
-AddNewRowEvt
-
-<aura:event type="COMPONENT" description="Use For Add New Row"></aura:event>

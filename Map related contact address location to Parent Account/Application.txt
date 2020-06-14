@@ -1,3 +1,0 @@
-<aura:application extends="Force:slds">
-    <c:AccountContactMap />
-</aura:application>
