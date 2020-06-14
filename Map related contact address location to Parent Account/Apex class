@@ -1,0 +1,52 @@
+ChildContactMapController
+public class ChildContactMapController {
+	
+    @AuraEnabled
+    public static List<Address> contactAddressMap(String recordId) {
+        List<Address> adressList = new List<Address>();
+        List<Contact> conList = [SELECT ID, Name, MailingStreet, MailingCity, MailingState, MailingCountry, MailingPostalCode from Contact 
+                                	WHERE AccountID =: recordId];
+        for(Contact con : conList) {
+            location location = new location(con.MailingStreet, con.MailingCity,con.MailingState,con.MailingCountry,con.MailingPostalCode);
+            adressList.add(new Address(location, con.Name));
+        }
+        return adressList;
+    }   
+    public class Address {
+        @AuraEnabled
+        public location location;
+        @AuraEnabled
+        public string icon;
+        @AuraEnabled
+        public string title;
+        @AuraEnabled
+        public string description;
+        
+        public address(location locTemp, string titleTemp) {
+            location = locTemp;
+            title = titleTemp;
+            icon = 'standard:contact';
+        }
+    }
+    
+    public class location {
+        @AuraEnabled
+        public string Street;
+        @AuraEnabled
+        public string City;
+        @AuraEnabled
+        public string PostalCode;
+        @AuraEnabled
+        public string State;
+        @AuraEnabled
+        public string Country;
+        
+        public location(string StreetTemp, string CityTemp, string StateTemp, string CountryTemp, string PostalCodeTemp) {
+            Street = StreetTemp;
+            City = CityTemp;
+            PostalCode = PostalCodeTemp;
+            State = StateTemp;
+            Country = CountryTemp;
+        }
+    }
+}
