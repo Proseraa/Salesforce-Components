@@ -1,0 +1,284 @@
+({
+    loadContactList: function(component, event, helper) {
+        helper.onLoad(component, event);
+        helper.getProcessInstace(component, event);
+    },
+    
+    handleApprove : function(component,event,helper){
+        var Ids = [];
+        var getAllId = component.find("boxPackage2");
+        if(! Array.isArray(getAllId)){
+            if (getAllId.get("v.value") == true) {
+                Ids.push(getAllId.get("v.text"));
+            }
+        }else{
+            for (var i = 0; i < getAllId.length; i++) {
+                if (getAllId[i].get("v.value") == true) {
+                    Ids.push(getAllId[i].get("v.text"));
+                }
+            }
+        }
+        helper.processSelectedRecords(component,event,'Approve', Ids);
+        helper.getProcessInstace(component, event);
+        component.set('v.isButtonApprove',true);
+        component.set('v.isButtonReject',true);
+        component.set("v.selectedProcessInstanceCount", 0);
+        component.find("approvalTableId").set("v.value", false);
+    },
+    
+    handleReject : function(component,event,helper){
+        var Ids = [];
+        var getAllId = component.find("boxPackage2");
+        if(! Array.isArray(getAllId)){
+            if (getAllId.get("v.value") == true) {
+                Ids.push(getAllId.get("v.text"));
+            }
+        }else{
+            for (var i = 0; i < getAllId.length; i++) {
+                if (getAllId[i].get("v.value") == true) {
+                    Ids.push(getAllId[i].get("v.text"));
+                }
+            }
+        }
+        helper.processSelectedRecords(component,event,'Reject', Ids);
+        helper.getProcessInstace(component, event);
+        component.set('v.isButtonApprove',true);
+        component.set('v.isButtonReject',true);
+        component.set("v.selectedProcessInstanceCount", 0);
+        component.find("approvalTableId").set("v.value", false);
+    },
+    
+    RefreshhandleClick: function (component, event, helper) {
+        var action = component.get('c.getcontactListIds');
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                component.set('v.ListOfContact', response.getReturnValue());
+                component.find("box3").set("v.value", false);
+            }
+        });
+        helper.getProcessInstace(component, event);
+        $A.enqueueAction(action);
+    },
+    
+    checkboxSelect: function(component, event, helper) {
+        var selectedRec = event.getSource().get("v.value");
+        var getSelectedNumber = component.get("v.selectedCount");
+        
+        var master = component.find("box3");
+        var boxPack = component.find("boxPack");
+        var masterval = master.get("v.value");
+        if (masterval == true) {
+            for (var i = 0; i < boxPack.length; i++) {
+                component.find("box3").set("v.value", false);
+            }
+        }
+        
+        if (selectedRec == true) {
+            getSelectedNumber++;
+        } else {
+            getSelectedNumber--;
+        }
+        component.set("v.selectedCount", getSelectedNumber);
+    },
+    
+    selectAll: function(component, event, helper) {
+        var selectedHeaderCheck = event.getSource().get("v.value");
+        var getAllId = component.find("boxPack");
+        
+        if(getAllId == null || getAllId == ''){
+            if(selectedHeaderCheck == true){
+                alert('You do not have any records to submit the approval');
+                component.find("box3").set("v.value", false);
+            }
+        }else if(!Array.isArray(getAllId)){
+            if(selectedHeaderCheck == true){ 
+                component.find("boxPack").set("v.value", true);
+                component.set("v.selectedCount", 1);
+            }else{
+                component.find("boxPack").set("v.value", false);
+                component.set("v.selectedCount", 0);
+            }
+        }else{
+            if (selectedHeaderCheck == true) {
+                for (var i = 0; i < getAllId.length; i++) {
+                    component.find("boxPack")[i].set("v.value", true);
+                    component.set("v.selectedCount", getAllId.length);
+                }
+            } else {
+                for (var i = 0; i < getAllId.length; i++) {
+                    component.find("boxPack")[i].set("v.value", false);
+                    component.set("v.selectedCount", 0);
+                }
+            } 
+        }  
+    },
+    
+    handleApproveAll : function(component,event,helper){
+        var Ids = [];
+        var getAllId = component.find("boxPackage2");
+        if(! Array.isArray(getAllId)){
+            if (getAllId.get("v.value") == true) {
+                Ids.push(getAllId.get("v.text"));
+            }
+        }else{
+            for (var i = 0; i < getAllId.length; i++) {
+                if (getAllId[i].get("v.value") == true) {
+                    Ids.push(getAllId[i].get("v.text"));
+                }
+            }
+        }
+        helper.processSelectedRecords(component,event,'Approve', Ids);
+        helper.getProcessInstace(component, event);
+        component.set('v.isButtonRejectAll',true);
+        component.set('v.isButtonApproveAll',true);
+        component.set("v.selectedProcessInstanceCount", 0);
+        component.find("approvalTableId").set("v.value", false);
+       
+    },
+    
+    handleRejectAll : function(component,event,helper){
+        var Ids = [];
+        var getAllId = component.find("boxPackage2");
+        if(! Array.isArray(getAllId)){
+            if (getAllId.get("v.value") == true) {
+                Ids.push(getAllId.get("v.text"));
+            }
+        }else{
+            for (var i = 0; i < getAllId.length; i++) {
+                if (getAllId[i].get("v.value") == true) {
+                    Ids.push(getAllId[i].get("v.text"));
+                }
+            }
+        }
+        helper.processSelectedRecords(component,event,'Reject', Ids);
+        helper.getProcessInstace(component, event);
+        component.set('v.isButtonRejectAll',true);
+        component.set('v.isButtonApproveAll',true);
+        component.set("v.selectedProcessInstanceCount", 0);
+        component.find("approvalTableId").set("v.value", false);
+    },
+    
+    sendApproval: function(component, event, helper) {
+        var Ids = [];
+        var getAllId = component.find("boxPack");
+        if(! Array.isArray(getAllId)){
+            if (getAllId.get("v.value") == true) {
+                Ids.push(getAllId.get("v.text"));
+            }
+        }else{
+            for (var i = 0; i < getAllId.length; i++) {
+                if (getAllId[i].get("v.value") == true) {
+                    Ids.push(getAllId[i].get("v.text"));
+                    
+                }
+            }
+        } 
+        helper.sendHelper(component,event,Ids);
+        helper.onLoad(component, event);
+    },
+    
+    selectAllToAppoveorReject : function(component, event, helper) {
+        
+        //get the header checkbox value
+        //To enable or disable Approve, Reject button based on row selection
+        var selectedHeaderCheck = event.getSource().get("v.value");
+        // get all checkbox on table with "boxPack" aura id (all iterate value have same Id)
+        // return the List of all checkboxs element 
+        var getAllId = component.find("boxPackage2");
+        // If the local ID is unique[in single record case], find() returns the component. not array   
+        if(getAllId == null || getAllId == ''){
+            if(selectedHeaderCheck == true){
+                alert('No records to approve/reject');
+                component.find("approvalTableId").set("v.value", false);
+            }
+        }else if(! Array.isArray(getAllId)){
+            if(selectedHeaderCheck == true){ 
+                component.find("boxPackage2").set("v.value", true);
+                component.set("v.selectedProcessInstanceCount", 1);
+                component.set('v.isButtonRejectAll',false);
+                component.set('v.isButtonApproveAll',false);
+                component.set('v.isButtonApprove',true);
+                component.set('v.isButtonReject',true);
+                
+            }else{
+                // check if select all (header checkbox) is true then true all checkboxes on table in a for loop  
+                // and set the all selected checkbox length in selectedCount attribute.
+                // if value is false then make all checkboxes false in else part with play for loop 
+                // and select count as 0 
+                component.set("v.selectedProcessInstanceCount", 0);
+                component.find("boxPackage2").set("v.value", false);
+                component.set('v.isButtonRejectAll',true);
+                component.set('v.isButtonApproveAll',true);
+                component.set('v.isButtonApprove',true);
+                component.set('v.isButtonReject',true);
+                
+            }
+        }else{
+            if (selectedHeaderCheck == true) {
+                for (var i = 0; i < getAllId.length; i++) {
+                    component.find("boxPackage2")[i].set("v.value", true);
+                    component.set("v.selectedProcessInstanceCount", getAllId.length);
+                    component.set('v.isButtonRejectAll',false);
+                    component.set('v.isButtonApproveAll',false);
+                    component.set('v.isButtonApprove',true);
+                    component.set('v.isButtonReject',true);
+                    
+                }
+            } else {
+                for (var i = 0; i < getAllId.length; i++) {
+                    component.find("boxPackage2")[i].set("v.value", false);
+                    component.set("v.selectedProcessInstanceCount", 0);
+                    component.set('v.isButtonRejectAll',true);
+                    component.set('v.isButtonApproveAll',true);
+                    component.set('v.isButtonApprove',true);
+                    component.set('v.isButtonReject',true);
+                    
+                }
+            } 
+        }
+        
+    },
+    ProcessIntancecheckboxSelect : function(component, event, helper) {
+        var selectedRec = event.getSource().get("v.value");
+        var getAllId = component.find("boxPackage2");
+        var getSelectedProcessInstanceNumber = component.get("v.selectedProcessInstanceCount");
+        var master = component.find("approvalTableId");
+        var masterval = master.get("v.value");
+        
+        
+        //var subsets = component.get("v.ListOfProcessInstance");
+        component.set('v.isButtonApprove',true);
+        component.set('v.isButtonReject',true);
+        component.find("approvalTableId").set("v.value", false);
+        
+        if (masterval == true) {
+            for (var i = 0; i < getAllId.length; i++) {
+                component.find("approvalTableId").set("v.value", false);
+            }
+        }
+        
+        //SelectedRec is true
+        if (selectedRec == true) {
+            getSelectedProcessInstanceNumber++;
+            component.set('v.isButtonApprove',false);
+            component.set('v.isButtonReject',false);
+            component.set('v.isButtonApproveAll',true);
+            component.set('v.isButtonRejectAll',true);
+        } else {
+            getSelectedProcessInstanceNumber--;
+            
+            component.set('v.isButtonApproveAll',true);
+            component.set('v.isButtonRejectAll',true);
+        }
+        
+        //Increment/Decrement the selected number 
+        component.set("v.selectedProcessInstanceCount", getSelectedProcessInstanceNumber);
+        
+        //To make Approve/Reject buttons enable
+        if(getSelectedProcessInstanceNumber >=1){
+            component.set('v.isButtonApprove',false);
+            component.set('v.isButtonReject',false);
+        }
+    },
+})

@@ -1,0 +1,111 @@
+public class BulkApprovalProcess {
+    
+    public static Map<Id, ProcessInstance> pIMap= new Map<Id, ProcessInstance>();
+    public static Map<Id, ProcessInstanceWorkitem> pwiMap= new Map<Id, ProcessInstanceWorkitem>();
+    public static set<Id> prcodessIdSet= new set<Id>();
+    
+    
+    @AuraEnabled
+    public static List<Contact> getcontactListIds(){
+        List<Contact> cList= [SELECT id, FirstName, LastName, Name, Amount_X__c, Office_Leave_Approvals__c, Submitted_Date__c, Reason__c, Approved_Date__c, Rejected_Date__c 
+                              FROM Contact where Amount_X__c=10000];
+        return cList;
+    }
+    
+    @AuraEnabled
+    public static list<ProcessInstance> getProcessInstaceIdsList(){
+        if(!getcontactListIds().isEmpty()){
+            List<ProcessInstance> prsList=[SELECT Id,Status,TargetObjectId FROM ProcessInstance 
+                                           WHERE Status='Pending' 
+                                           AND TargetObjectId IN: getcontactListIds()];
+            for(ProcessInstance pi: prsList){
+                pIMap.put(pi.id, pi);
+                prcodessIdSet.add(pi.TargetObjectId);
+            }
+            return prsList; 
+        }
+        return null;
+    }
+    
+    @AuraEnabled
+    public static Map<String,String> InitialApprovalProcess(List<String> lstRecordId){
+        Map<String,String> retvalMap =new Map<String,String>();
+        try{
+            List<Approval.ProcessSubmitRequest> approvalRequestList = new List<Approval.ProcessSubmitRequest>();
+            if(lstRecordId.isEmpty()){
+                retvalMap.put('Error','Please Select the contact for submission');
+                return retvalMap;
+            }
+            List<contact> contactlist =[Select id, FirstName, LastName, Name,Office_Leave_Approvals__c,Amount_X__c,Rejected_Date__c
+                                        From Contact 
+                                        Where Id NOT IN: prcodessIdSet 
+                                        AND Id IN: lstRecordId
+                                        AND Amount_X__c=10000];
+            for(Contact c: contactlist){ 
+                if(c.Office_Leave_Approvals__c!= 'Submit'){
+                    Approval.ProcessSubmitRequest approvalRequest = new Approval.ProcessSubmitRequest();
+                    approvalRequest.setComments('Submitting request for approval.');
+                    approvalRequest.setObjectId(c.id);
+                    approvalRequestList.add(approvalRequest);
+                }else{ 
+                    retvalMap.put('Info','Already Submitted record are there/Please Send the approval only Status is not submit');
+                    return retvalMap;
+                }
+            }
+            
+            Approval.process(approvalRequestList); 
+            retvalMap.put('Success','Submitted for Approval successfully');
+            return retvalMap;
+            
+        }catch(Exception ex){ 
+            retvalMap.put('Error',ex.getMessage());
+            return retvalMap;
+        }
+    }
+    
+    @AuraEnabled
+    public static Map<String,String> getProcessIntanceWorkItem(List<String> lstWorkItemIds, String processType){
+        Map<String,String> retvalMap =new Map<String,String>();
+        getProcessInstaceIdsList();
+        String message = '';
+        String comments = processType == 'Approve' ? 'Approved' : 'Rejected';
+        Integer recordsProcessed = 0;
+        try{
+            List<Approval.ProcessWorkitemRequest> lstWorkItemRequest = new List<Approval.ProcessWorkitemRequest>(); 
+            if(lstWorkItemIds.isEmpty()){
+                retvalMap.put('Error','Please Select atLeast onerecord to approve/reject');
+                return retvalMap;
+            }
+            
+            if(!pIMap.isEmpty()){
+                for(ProcessInstanceWorkitem pwi: [SELECT Id, ProcessInstanceId FROM ProcessInstanceWorkitem WHERE 
+                                                  ProcessInstanceId IN: pIMap.keySet() AND ProcessInstanceId IN: lstWorkItemIds])
+                {
+                    
+                    Approval.ProcessWorkitemRequest req2 = new Approval.ProcessWorkitemRequest();
+                    req2.setComments(comments);
+                    req2.setAction(processType); //to approve use 'Approve'
+                    req2.setNextApproverIds(new Id[] {UserInfo.getUserId()});
+                    // Use the ID from the newly created item to specify the item to be worked
+                    req2.setWorkitemId(pwi.id);
+                    // Add the request for approval
+                    lstWorkItemRequest.add(req2);
+                }
+            }
+            if(lstWorkItemRequest.size()>0){
+                Approval.ProcessResult[] result2 =  Approval.process(lstWorkItemRequest);
+                if(comments == 'Approved'){
+                    retvalMap.put('Success',comments+' successfully');
+                }else{
+                    retvalMap.put('Info',comments+' successfully');
+                }
+                return retvalMap;
+            }
+            return null;
+        }catch(Exception ex){ 
+            retvalMap.put('Error',ex.getMessage());
+            return retvalMap;
+        }
+        
+    }
+}
