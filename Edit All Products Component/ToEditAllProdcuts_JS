@@ -1,0 +1,47 @@
+({
+    init: function (cmp, event, helper) {
+        var action = cmp.get("c.getListOfOrderli");
+        action.setParams({
+            recordId : cmp.get("v.recordId")
+        }); 
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var rows = response.getReturnValue();
+                cmp.set("v.OlitemList", rows);
+                
+            }
+        });
+        $A.enqueueAction(action);
+    },
+    handleSaveSelectedProducts : function (cmp, event, helper) {
+        var action = cmp.get("c.UpdateListOfOrderli");
+        var updateolilist = cmp.get("v.OlitemList");
+        action.setParams({
+            recordId : cmp.get("v.recordId"),
+            olilist : updateolilist
+        }); 
+        action.setCallback(this, function(response){
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                var rows = response.getReturnValue();
+                var toastEvent = $A.get("e.force:showToast");
+                toastEvent.setParams({
+                    type : 'success',
+                    title : 'Success',
+                    message : 'Updated Successfully',
+                    mode : 'pester',
+                    key: 'info_alt',
+                    duration:' 2000',
+                });
+                toastEvent.fire();
+                $A.get("e.force:closeQuickAction").fire()
+            }
+        });
+        $A.enqueueAction(action);
+        
+    },
+    cancelButton : function (cmp, event, helper) {
+        $A.get("e.force:closeQuickAction").fire()
+    }
+})
