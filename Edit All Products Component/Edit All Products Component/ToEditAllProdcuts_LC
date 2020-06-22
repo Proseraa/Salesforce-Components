@@ -1,0 +1,86 @@
+<aura:component controller="ToEditProductsApex" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickActionWithoutHeader" access="global" >
+    <!--Custom Styles for Modal Header and Footer-->
+    <aura:html tag="style">
+        .slds-p-around--medium {
+        padding: 0rem !important;
+        }   
+        
+        .slds-modal__content{
+        overflow-y:hidden !important;
+        height:unset !important;
+        max-height:unset !important;  
+        }
+        .cuf-content {
+        padding: 0 0rem !important; 
+        }
+        .slds-modal__container{
+        max-width: 60rem !important;
+        }
+    </aura:html>
+    
+    <!--component attributs -->
+    <aura:attribute type="OrderItem__c[]" name="OlitemList"/>
+    <aura:attribute name="recordId" type="Id"/>
+    
+    <!--aura handler with waiting and donewaiting events-->
+    <aura:handler name="init" value="{!this}" action="{!c.init}"/>
+    
+    
+    
+    <!--Modal Header-->  
+    <div class="modal-header slds-modal__header slds-size_1-of-1">
+        <h4 class="title slds-text-heading--medium">Edit All Products</h4>
+    </div> 
+    <!--End Modal Header-->
+    
+    <div class="slds-modal__content slds-p-around--x-small slds-align_absolute-center slds-size_1-of-1 slds-is-relative">
+        <form class="slds-form--stacked">
+            <div class="slds-scrollable" style="height:400px;">
+                <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                    <thead>
+                        <tr class="slds-text-title--caps">
+                            <th>
+                                <span class="slds-truncate" title="Product Name">Product Name</span>      
+                            </th>
+                            <th>
+                                <span class="slds-truncate" title="Quantity">Quantity</span>      
+                            </th>
+                            <th>
+                                <span class="slds-truncate" title="Unit Price">Unit Price</span>      
+                            </th>
+                            <th>
+                                <span class="slds-truncate" title="List Price">List Price</span>      
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <aura:iteration items="{!v.OlitemList}" var="orlitem">
+                            <tr>
+                                <td scope="row">
+                                    <div  class="slds-truncate" title="{!orlitem.Name}"><a>{!orlitem.Name}</a></div>
+                                </td>
+                                <td scope="row">
+                                    <ui:inputText aura:id="quantity" value="{!orlitem.Quantity__c}" />
+                                </td>
+                                <td scope="row">
+                                    <ui:inputCurrency aura:id="unitprice" value="{!orlitem.Unit_Price__c}" />
+                                </td>
+                                <td scope="row">
+                                    <ui:outputCurrency aura:id="ListPrice" value="{!orlitem.ListPrice__c}" />
+                                </td>
+                            </tr>
+                        </aura:iteration>
+                    </tbody>
+                </table>
+            </div>
+        </form>
+    </div>
+    
+    <!--Modal Footer-->
+    <div class="modal-footer slds-modal__footer slds-size_1-of-1"> 
+        <lightning:button onclick="{!c.cancelButton}" label="Cancel" variant="Neutral" />
+        <lightning:button label="Save" onclick="{!c.handleSaveSelectedProducts}"  variant="brand" />   
+        
+    </div>
+    <!--End of Modal Footer-->
+</aura:component>
