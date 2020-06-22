@@ -1,0 +1,106 @@
+<apex:page standardstylesheets="false" showheader="false" standardController="Lead">
+<!--  ----------------------------------------------------------------------  -->
+<!--  NOTE: Please add the following <META> element to your page <HEAD>.      -->
+<!--  If necessary, please modify the charset parameter to specify the        -->
+<!--  character set of your HTML page.                                        -->
+<!--  ----------------------------------------------------------------------  -->
+
+<META HTTP-EQUIV="Content-type" CONTENT="text/html; charset=UTF-8" />
+
+<!--  ----------------------------------------------------------------------  -->
+<!--  NOTE: Please add the following <FORM> element to your page.             -->
+<!--  ----------------------------------------------------------------------  -->
+
+<form action="https://webto.salesforce.com/servlet/servlet.WebToLead?encoding=UTF-8" method="POST">
+
+<input type="hidden" name="oid" value="00D1U000000zULo" />
+<input type="hidden" name="retURL" value="http://www.proseraa.com" />
+
+<!--  ----------------------------------------------------------------------  -->
+<!--  NOTE: These fields are optional debugging elements. Please uncomment    -->
+<!--  these lines if you wish to test in debug mode.                          -->
+<!--  <input type="hidden" name="debug" value=1>                              -->
+<!--  <input type="hidden" name="debugEmail"                                  -->
+<!--  value="pooja.nair@proseraa.com">                                        -->
+<!--  ----------------------------------------------------------------------  -->
+
+<center><apex:image url="{!$Resource.ProseraaLogo}" width="200" height="100"/></center>
+<br/>
+<style>
+input[type=text] {
+  width: 100%;
+  padding: 10px 15px;
+  margin: 3px 0;
+  box-sizing: border-box;
+  border: 3px solid #ccc;
+}
+select {
+  width: 100%;
+  padding: 10px 15px;
+  margin: 3px 0;
+  box-sizing: border-box;
+  border: 3px solid #ccc;
+  
+}
+input[type=submit] {
+  border: none;
+  padding: 16px 32px;
+  margin: 4px 2px;
+  cursor: pointer;
+  text-align: center;
+  position: center;
+}
+.button5 {
+  background-color: white;
+  color: black;
+  border: 2px solid #555555;
+}
+
+.button5:hover {
+  background-color: #555555;
+  color: white;
+}
+
+body  {
+  
+  background-image: url('{!URLFOR($Resource.logistics_bg)}');
+  background-position: center;
+  background-color: #cccccc;
+  background-size:100% 130vh;
+  background-repeat: no-repeat;
+  
+  
+}
+.center {
+  margin: auto;
+  width: 30%;
+  border: 1px solid grey;
+  padding: 10px;
+  background-color: #DCDCDC;
+}
+
+
+
+</style>
+
+
+<div class="center">
+
+
+<label for="first_name">First Name</label><input  id="first_name" maxlength="40" name="first_name" size="20" type="text" /><br/>
+
+<label for="last_name">Last Name <span style="color:red;">*</span></label><input  id="last_name" maxlength="80" name="last_name" size="20" type="text" /><br/>
+
+<label for="email">Email <span style="color:red;">*</span></label><input  id="email" maxlength="80" name="email" size="20" type="text" /><br/>
+
+<label for="phone">Phone</label><input  id="phone" maxlength="40" name="phone" size="20" type="text" /><br/>
+
+<label for="mobile">Mobile <span style="color:red;">*</span></label><input  id="mobile" maxlength="40" name="mobile" size="20" type="text" /><br/>
+
+<label for="company">Company <span style="color:red;">*</span></label><input  id="company" maxlength="40" name="company" size="20" type="text" /><br/>
+
+<input type="hidden" id="lead_source" name="lead_source" value="web"/>
+<input class="button button5" type="submit" name="submit" style="margin-left: 35%" />
+</div>
+</form>
+</apex:page>
