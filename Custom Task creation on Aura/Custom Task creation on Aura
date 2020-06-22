@@ -1,0 +1,137 @@
+public class customActivityCtrl {
+    @AuraEnabled 
+    public static List<task> fetchTask(){
+        return [SELECT Id,Subject,Description,ActivityDate,Who.Name,WhoId,Priority
+                FROM Task
+                LIMIT 20];
+    }
+}
+
+---------------------------------------------------
+customActivityChild Component
+
+<aura:component>    
+    
+    <aura:attribute name="activity" type="object" description="to store single activity (task/event) record data"/> 
+    
+    <li>
+        <div class="isExpendable slds-timeline__item_expandable slds-timeline__item_task" aura:id="expId"> 
+            <div class="slds-media">
+                <div class="slds-media__figure">
+                    <button class="slds-button slds-button_icon"
+                            onclick="{!c.toggleAcitivity}"
+                            title="test"
+                            aria-controls="task-item-base">
+                        <lightning:icon iconName="utility:switch" 
+                                        size="x-small"
+                                        class="slds-button__icon slds-timeline__details-action-icon"/>
+                    </button>
+                    
+                    <div class="slds-icon_container" title="task">
+                        <lightning:icon iconName="standard:task" size="small"/>
+                    </div>
+                </div>
+                
+                <div class="slds-media__body">
+                    <div class="slds-grid slds-grid_align-spread slds-timeline__trigger">
+                        <div class="slds-grid slds-grid_vertical-align-center slds-truncate_container_75 slds-no-space">
+                            <h3 class="slds-truncate" title="{!v.activity.Subject}">
+                                <strong>{!v.activity.Subject}</strong>
+                            </h3>
+                        </div>
+                    </div>
+                    
+                    <p class="slds-m-horizontal_xx-small">
+                        <lightning:formattedDateTime value="{!v.activity.ActivityDate}"/> 
+                    </p>
+                    
+                    <!-- expandable section start-->
+                    <article class="slds-box slds-timeline__item_details slds-theme_shade slds-m-top_x-small slds-m-horizontal_xx-small"
+                             id="task-item-base"
+                             aria-hidden="true">
+                        <ul class="slds-list_horizontal slds-wrap">
+                            <li class="slds-grid slds-grid_vertical slds-size_1-of-2 slds-p-bottom_small">
+                                <span class="slds-text-title slds-p-bottom_x-small">Priority</span>
+                                <span class="slds-text-body_medium slds-truncate" title="{!v.activity.Priority}">{!v.activity.Priority}</span>
+                            </li>
+                            
+                            <li class="slds-grid slds-grid_vertical slds-size_1-of-2 slds-p-bottom_small">
+                                <span class="slds-text-title slds-p-bottom_x-small">Description</span>
+                                <span class="slds-text-body_medium slds-truncate" title="{!v.activity.Description}">{!v.activity.Description}</span>
+                            </li>
+                            <li class="slds-grid slds-grid_vertical slds-size_1-of-2 slds-p-bottom_small">
+                                <span class="slds-text-title slds-p-bottom_x-small">Related To</span>
+                                <span class="slds-text-body_medium slds-truncate" title="{!v.activity.Who.Name}">{!v.activity.Who.Name}</span>
+                            </li>
+                        </ul>
+                    </article>
+                    
+                </div>
+            </div>
+        </div>
+    </li>
+</aura:component>
+
+--------------------------------------
+
+
+customActivityChildController.js
+
+({
+    
+    toggleAcitivity : function(component, event, helper) {
+        // toggle 'slds-is-open' class to expand/collapse activity section
+        $A.util.toggleClass(component.find('expId'), 'slds-is-open');
+    },
+    
+})
+
+------------------------------------
+
+Parent Component customActivity.cmp
+
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"
+                access="global"
+                controller="customActivityCtrl">
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:attribute name="lstActivity" type="list" />
+    
+    <ul class="slds-timeline">        
+        <!--iterate all activity records in child component-->
+        <aura:iteration items="{!v.lstActivity}" var="task">
+            <c:customActivityChild activity="{!task}"/>
+        </aura:iteration>
+    </ul>
+</aura:component>
+
+----------------------------------
+Parent Component JavaScript : [customActivityController.js]
+
+
+({
+    doInit : function(component, event, helper) {
+        var action = component.get("c.fetchTask");
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            if (state === "SUCCESS") {
+                component.set("v.lstActivity" , response.getReturnValue()); 
+            }
+            else if (state === "INCOMPLETE") {
+                console.log("INCOMPLETE RESPONSE");
+            }
+                else if (state === "ERROR") {
+                    var errors = response.getError();
+                    if (errors) {
+                        if (errors[0] && errors[0].message) {
+                            console.log("Error message: " + 
+                                        errors[0].message);
+                        }
+                    } else {
+                        console.log("Unknown error");
+                    }
+                }
+        });
+        $A.enqueueAction(action);
+    },    
+})
+ 
