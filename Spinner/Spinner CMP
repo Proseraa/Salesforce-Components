@@ -1,0 +1,11 @@
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+	<div class="exampleHolder">
+        <lightning:spinner alternativeText="Loading" size="small" />
+    </div>
+    <div class="exampleHolder">
+        <lightning:spinner alternativeText="Loading" size="medium" />
+    </div>
+    <div class="exampleHolder">
+        <lightning:spinner alternativeText="Loading" size="large" />
+    </div>
+</aura:component>
