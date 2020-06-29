@@ -1,0 +1,69 @@
+public class parseresponsewrapper{
+    //Origin and Destination Component
+    public List<String> destination_addresses;
+    public List<String> origin_addresses;
+    public List<Rows> rows;
+    public String status;
+    
+    public class Elements {
+        public Distance distance;
+        public Distance duration;
+        public String status;
+    }
+    
+    public class Distance {
+        public String text;
+        public Integer value;
+    }
+    
+    public class Rows {
+        public List<Elements> elements;
+    }
+    
+    //Address Component
+    public class Address_components {
+        public String long_name;
+        public String short_name;
+        public List<String> types;
+    }
+    
+    public class Geometry {
+        public Bounds bounds;
+        public Northeast location;
+        public String location_type;
+        public Bounds viewport;
+    }
+    
+    public class Plus_code {
+        public String compound_code;
+        public String global_code;
+    }
+    
+    public Plus_code plus_code;
+    public List<Results> results;
+    public String status1;
+    
+    public class Results {
+        public List<Address_components> address_components;
+        public String formatted_address;
+        public Geometry geometry;
+        public String place_id;
+        public List<String> types;
+    }
+    
+    public class Bounds {
+        public Northeast northeast;
+        public Northeast southwest;
+    }
+    
+    public class Northeast {
+        public Double lat;
+        public Double lng;
+    }
+
+    
+    
+    public static parseresponsewrapper parse(String json) {
+        return (parseresponsewrapper) System.JSON.deserialize(json, parseresponsewrapper.class);
+    }
+}

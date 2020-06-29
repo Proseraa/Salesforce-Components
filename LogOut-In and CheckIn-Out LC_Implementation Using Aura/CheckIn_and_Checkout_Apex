@@ -1,0 +1,229 @@
+/**
+ * @File Name          : GeoCodingForGeoLocation_Apex.cls
+ * @Description        : Apex class for GeoLocation Checkin checkout functionality
+ * @Author             : krishna Reddy | krishna.reddy@proseraa.com
+ * @Last Modified By   : krishna Reddy | krishna.reddy@proseraa.com
+ * @Last Modified On   : 26/07/2020, 9:00 PM
+ * @Modification Log   : 
+ *============================================================================================
+ * Ver         Date                     Author                                 Modification
+ *============================================================================================
+ * 3.0    26/07/2020, 9:00 PM   krishna Reddy | krishna.reddy@proseraa.com     Initial Version
+**/
+
+public class GeoCodingForGeoLocation_Apex {
+    
+    //Returning VisitPlan Details
+    @AuraEnabled
+    public static Visit_plan__c getVisitPlan(String recordId){
+        return [SELECT id, Doctor__c, Log_In__c,Log_Out__c, Check_In__c, Check_Out__c, Check_In_Address__c, Check_Out_Address__c, Distance_Text_and_Value__c, Duration_Text_and_Value__c, Log_In_Date_Time__c, Log_Out_Date_Time__c,Total_KiloMeters__c from Visit_plan__c where id=:recordId];
+    }
+    
+    //Creating the Check-In Info
+    @AuraEnabled
+    public static string CheckInLocationAddress(String recId, decimal latitude, decimal longitude){
+        String Address='';
+        
+        //Getting the custom setting values Endpoint and Key
+        GoogleApis_Info__c settings = GoogleApis_Info__c.getInstance();
+        String EndPoint = settings.EndPoint__c;
+        String Key = settings.Key__c;
+        
+        if(latitude!= null && longitude!= null){
+            Http http = new Http();
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(EndPoint+'distancematrix/json?units=imperial&origins='+latitude+','+longitude+'&destinations='+latitude+','+longitude+'&key=AIzaSyBqqej11sosokXGaQTk_-Zw9AIXMVkXoAE');
+            request.setMethod('GET');
+            HttpResponse response = http.send(request); 
+            if (response.getStatusCode() == 200) {
+                List<String> typeobject = new List<string>();
+                //parseresponsewrapper class
+                parseresponsewrapper resbody = parseresponsewrapper.parse(response.getBody());
+                List<String> originaddress = resbody.origin_addresses;
+                Address = String.join(originaddress, ' ');
+                if(recId!= null){
+                    Visit_plan__c vp = new Visit_plan__c();
+                    vp.Check_In_Latitude_Longitude__c = latitude+','+longitude;
+                    vp.Check_In_Address__c=Address;
+                    vp.Id=recId;
+                    vp.Check_In__c=true;
+                    vp.Check_Out__c=false;
+                    vp.Log_Out__c=false;
+                    update vp;
+                    
+                    //Inserting the Check-In Info
+                    Contact_Check_In_Out__c ConCheckIn=new Contact_Check_In_Out__c();
+                    ConCheckIn.CheckIn_Date_Time__c=system.now();
+                    ConCheckIn.GeoLocation__latitude__s=latitude;
+                    ConCheckIn.GeoLocation__longitude__s=longitude;
+                    ConCheckIn.Visit_plan__c=recId;
+                    if(getVisitPlan(recId).Doctor__c!= null){
+                        ConCheckIn.Doctor__c= getVisitPlan(recId).Doctor__c;
+                    }
+                    ConCheckIn.CheckIn_Address__c=Address;
+                    insert ConCheckIn;
+                }
+                
+            }    
+        }
+        return Address;
+    }
+    
+    //Creating the Check-Out Info
+    @Auraenabled
+    public static Visit_plan__c CheckOutLocationAddress(String recId, decimal latitude, decimal longitude)
+    {
+        
+        //Getting the custom setting values Endpoint and Key
+        GoogleApis_Info__c settings = GoogleApis_Info__c.getInstance();
+        String EndPoint = settings.EndPoint__c;
+        String Key = settings.Key__c;
+        
+        if(recId!= null){
+            
+            //Quering the Current record of Visitplan
+            Visit_plan__c vplan = [SELECT Id,Doctor__c,Total_KiloMeters__c, Check_In_Latitude_Longitude__c from Visit_plan__c Where Id=: recId];
+            
+            String checkinLatLong='';
+            if(vplan.Check_In_Latitude_Longitude__c!= null){
+                checkinLatLong= vplan.Check_In_Latitude_Longitude__c;
+            }
+            
+            Http http = new Http();
+            HttpRequest request = new HttpRequest();
+            request.setEndpoint(EndPoint+'distancematrix/json?units=imperial&origins='+checkinLatLong+'&destinations='+latitude+','+longitude+'&key='+Key+'');
+            request.setMethod('GET');
+            HttpResponse response = http.send(request); 
+            if (response.getStatusCode() == 200) {
+                String distancetext = '';
+                Integer distancevalue;
+                String durationtext = '';
+                Integer durationvalue;
+                
+                //parseresponsewrapper class
+                parseresponsewrapper resbody = parseresponsewrapper.parse(response.getBody());
+                List<String> destinationaddress = resbody.destination_addresses;
+                String Address = String.join(destinationaddress, ' ');
+                for(parseresponsewrapper.Rows rw:resbody.Rows){
+                    for(parseresponsewrapper.Elements ele: rw.elements){
+                        parseresponsewrapper.Distance dis= ele.distance;
+                        parseresponsewrapper.Distance dur = ele.duration;
+                        distancetext = dis.text;
+                        distancevalue = dis.value;
+                        durationtext = dur.text;
+                        durationvalue = dur.value;
+                    }
+                }
+                
+                
+                //Updating the VisitPlan
+                //if(recId!= null){
+                Visit_plan__c vp = new Visit_plan__c();
+                vp.Check_Out_Latitude_Longitude__c = latitude+','+longitude;
+                vp.Check_Out_Address__c=Address;
+                vp.Check_In__c=false;
+                vp.Check_Out__c=true;
+                vp.Log_In__c=true;
+                vp.Id=recId;
+                
+                if(distancetext!= null && distancevalue!=null){
+                    System.debug('distancevalue' + distancevalue);
+                    List<String> distavalist= distancetext.split(' ');
+                    List<String> distavalist1= distancetext.split(' ');
+                    Decimal distanceval=0;
+                    if(distavalist[1]== 'mi'){
+                        distanceval = Decimal.valueof(distavalist[0]) * 1.60934;
+                    }else if(distavalist1[1]== 'ft'){
+                        distanceval = Decimal.valueof(distavalist[0]) * 0.0003048;
+                    }
+                    
+                    //Inserting the Contact Check Out Info
+                    Contact_Check_In_Out__c ConCheckOut=new Contact_Check_In_Out__c();
+                    ConCheckOut.Checkout_Date_time__c=system.now();
+                    ConCheckOut.GeoLocation__latitude__s=latitude;
+                    ConCheckOut.GeoLocation__longitude__s=longitude;
+                    ConCheckOut.Visit_plan__c=recId; 
+                    ConCheckOut.Checkout_Address__c=Address;
+                    ConCheckOut.KiloMeters__c=distanceval;
+                    if(vplan.Doctor__c!= null){
+                        ConCheckOut.Doctor__c= vplan.Doctor__c;
+                    }
+                    insert ConCheckOut;
+                    
+                    vp.Distance_Text_and_Value__c=distancetext+' '+distanceval+' KM';
+                    if(ConCheckOut.id!= null){
+                        list<AggregateResult> AggregateResultList1=[select sum(KiloMeters__c)km from Contact_Check_In_Out__c where Visit_plan__c  =:recId];
+                        if(AggregateResultList1!= null && AggregateResultList1.size() > 0){ 
+                            for(AggregateResult agg:AggregateResultList1){ 
+                                if(vplan.Total_KiloMeters__c==null || vplan.Total_KiloMeters__c==0){
+                                    vp.Total_KiloMeters__c= Math.round(distanceval);
+                                }else{
+                                    vp.Total_KiloMeters__c= Math.round((Decimal)agg.get('km'));
+                                }
+                                
+                            }
+                        }
+                    }
+                }
+                update vp;
+                System.debug('vp'+ vp);
+                System.debug('vp.Distance_Text_and_Value__c'+ vp.Distance_Text_and_Value__c);
+                return vp;
+            } 
+            
+        }
+        return null;
+    }
+    
+    //Updating the Log-In Info
+    @AuraEnabled
+    public static Visit_plan__c updatelogintime(String recordId){
+        if(recordId!= null){
+            Visit_plan__c vp = new Visit_plan__c();
+            vp.Log_In_Date_Time__c=System.now();
+            vp.Id=recordId;
+            vp.Log_In__c= true;
+            vp.Log_Out__c=false;
+            vp.Check_In__c=false;
+            Update vp;
+            return vp;
+        }
+        return null;
+    }
+    
+    //Updating the Log-Out Info
+    @AuraEnabled
+    public static Visit_plan__c updatelogouttime(String recordId){
+        if(recordId!= null){
+            
+            List<Contact_Check_In_Out__c> checklist = [SELECT Id, Visit_plan__c FROM Contact_Check_In_Out__c
+                                                   WHERE Visit_plan__c=: recordId];
+            Visit_plan__c vp = new Visit_plan__c();
+            vp.Log_Out_Date_Time__c=System.now();
+            vp.Id=recordId;
+            
+            System.debug('checklist.size()'+ checklist.size()); 
+            if(checklist.size()==0 || checklist.size()<0){
+                System.debug('checklist.size()'+ checklist.size()); 
+                vp.Check_In_Address__c=null;
+                vp.Check_Out_Address__c=null;
+                vp.Log_In_Date_Time__c=null;
+                vp.Log_Out_Date_Time__c=null;
+                vp.Check_In_Latitude_Longitude__c=null;
+                vp.Check_Out_Latitude_Longitude__c=null;
+                vp.Distance_Text_and_Value__c=null;
+                vp.Total_KiloMeters__c=null;
+            }
+            
+            vp.Log_In__c=false;
+            vp.Log_Out__c=true;
+            vp.Check_Out__c=true;
+            vp.Check_In__c=true;
+            Update vp;
+            return vp;
+        }
+        return null;
+    }
+    
+    
+}

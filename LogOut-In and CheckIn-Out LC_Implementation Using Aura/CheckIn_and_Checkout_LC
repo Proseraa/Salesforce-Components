@@ -1,0 +1,62 @@
+<aura:component controller="GeoCodingForGeoLocation_Apex" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+    
+    <!-- Component Attributes-->
+    <aura:attribute name="latitude" type="Decimal"/>
+    <aura:attribute name="longitude" type="Decimal"/>
+    <aura:attribute name="checkoutlatitude" type="Decimal"/>
+    <aura:attribute name="checkoutlongitude" type="Decimal"/>
+    
+    <aura:attribute name="Address" type="String"/>
+    <aura:attribute name="logointime" type="DateTime"/>
+    <aura:attribute name="logouttime" type="DateTime"/>
+    <aura:attribute name="checkInAddress" type="String"/>
+    <aura:attribute name="checkOutAddress" type="String"/>
+    <aura:attribute name="Distance" type="String"/>
+    <aura:attribute name="Duration" type="String"/>
+    <aura:attribute name="TotalDistance" type="String"/>
+    
+    
+    <aura:attribute name="isButtonLogIn" type="Boolean" default="true" />
+    <aura:attribute name="isButtonCheckIn" type="Boolean" default="true" />
+    <aura:attribute name="isButtonCheckOut" type="Boolean" default="true" />
+    <aura:attribute name="isButtonLogOut" type="Boolean" default="true" />
+    <aura:attribute name="recordId" type="string"/>
+    
+    <!-- aura handler-->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}" />
+    
+    
+    <!-- aura layout starts-->
+    <lightning:layout >
+        <lightning:layoutItem padding="around-small">
+            
+            <lightning:layoutItem>          
+                <lightning:button label="Log In" onclick="{!c.LogIn}" disabled="{!v.isButtonLogIn}" class="slds-button slds-button_success"/>
+                <lightning:button label="Check In" onclick="{!c.CheckIn}" disabled="{!v.isButtonCheckIn}" class="slds-button slds-button_success"/>
+                <lightning:button label="Check Out" onclick="{!c.CheckOut}" disabled="{!v.isButtonCheckOut}" class="slds-button slds-button_success"/>
+                <lightning:button label="Log Out" onclick="{!c.LogOut}" disabled="{!v.isButtonLogOut}" class="slds-button slds-button_destructive"/><br/><br/>
+                <div class="demo-only">
+                    <lightning:spinner aura:id="mySpinner" alternativeText="Processing.." title="Processing.." variant="brand" size="large" class="slds-hide"/>
+                </div>
+            </lightning:layoutItem>  
+            <h1><b>LogIn/Out Info</b></h1>
+            <label class="slds-form-element__label">LogIn Time:</label>
+            <span><ui:outputDateTime value="{!v.logointime}"/></span><br/>
+            <label class="slds-form-element__label">LogOut Time:</label>
+            <span><ui:outputDateTime value="{!v.logouttime}"/></span><br/><br/>
+            <h1><b>CheckIn/Out Info</b></h1>
+            <label class="slds-form-element__label">CheckIn Address:</label>
+            <span><ui:outputText value="{!v.checkInAddress}"/></span><br/>
+            <label class="slds-form-element__label">CheckOut Address:</label>
+            <span><ui:outputText value="{!v.checkOutAddress}"/></span><br/><br/>
+            <h1><b>Distance Info</b></h1>
+            <label class="slds-form-element__label">Distance Text and Value:</label>
+            <span><ui:outputText value="{!v.Distance}"/></span><br/><br/>
+            <h1><b>Total Distance Info</b></h1>
+            <label class="slds-form-element__label">Distance:</label>
+            <span><ui:outputText value="{!v.TotalDistance}"/></span>
+            
+        </lightning:layoutItem>
+    </lightning:layout>
+    <!-- aura layout ends-->
+</aura:component>
